@@ -1,0 +1,12 @@
+# Demo PQRS TRD y archivo físico · dependencias (Python 3.11+; probado con 3.13 y 3.14)
+streamlit==1.66.0
+pandas==3.0.6
+plotly==7.1.0
+openpyxl==3.1.5
+holidays==0.106
+python-dateutil==2.9.0.post0
+pypdf==6.21.1
+python-docx==1.2.0
+fpdf2==2.8.9
+segno==1.6.6
+httpx==0.28.1

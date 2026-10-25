@@ -1,0 +1,12 @@
+# Entorno y cachés
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Datos locales de la demo (SQLite y archivos)
+.datos/
+# Secretos: NUNCA al repositorio
+.streamlit/secrets.toml
+.env
+*.env
+.secrets/

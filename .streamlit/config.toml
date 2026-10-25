@@ -1,0 +1,24 @@
+[theme]
+base = "light"
+primaryColor = "#1E5AA8"
+backgroundColor = "#F5F7FB"
+secondaryBackgroundColor = "#E8EEF7"
+textColor = "#0F172A"
+font = "sans serif"
+baseFontSize = 16
+
+[theme.sidebar]
+backgroundColor = "#12355B"
+secondaryBackgroundColor = "#1B4577"
+textColor = "#F1F5F9"
+primaryColor = "#5EEAD4"
+
+[server]
+maxUploadSize = 10  # MB por archivo: igual a max_mb_archivo (el total por solicitud, 25 MB, lo valida la app)
+runOnSave = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
