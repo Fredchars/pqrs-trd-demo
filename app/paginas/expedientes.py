@@ -55,9 +55,9 @@ with t1:
                 st.markdown(tema.badge(f"{x['nivel_icono']} {x['nivel_texto']}", tono) + " " + tema.badge(A.ESTADOS_EXPEDIENTE.get(x["estado"], x["estado"]), "azul")
                             + " " + tema.badge(UA.ICONO_DISP.get(x["disposicion"], ""), "morado"), unsafe_allow_html=True)
                 tema.kpis([("🔒", "Cierre de la PQRS", fmt_fecha(x["fecha_cierre"]), "azul", ""),
-                           ("🏁", "Fin archivo de gestión", fmt_fecha(x["fecha_fin_gestion"]), "teal", f"{x['anios_gestion']} años de gestión"),
+                           ("🏁", "Fin archivo de gestión", fmt_fecha(x["fecha_fin_gestion"]), "teal", f"{UA.anios(x['anios_gestion'])} de gestión"),
                            ("⌛", "Fin de retención", fmt_fecha(x["fecha_disposicion"]), UA.TONO_NIVEL[x["nivel"]] if x["nivel"] else "verde",
-                            f"{x['anios_central']} años en central"),
+                            f"{UA.anios(x['anios_central'])} en central"),
                            ("📆", "Días restantes", x["dias_restantes"], UA.TONO_NIVEL[x["nivel"]] if x["nivel"] else "verde", f"Fase actual: {x['fase']}")])
                 if x.get("observacion"):
                     st.info(f"ℹ️ {x['observacion']}")
@@ -99,13 +99,15 @@ with t2:
             if c1.button("⚡ Asignar las series sugeridas a todas", key="ss_masivo", type="primary",
                          help="Usa los «tipos de PQRS sugeridos» de cada subserie. Las que no tengan sugerencia quedan para asignar a mano."):
                 r = UA.ejecutar(A.asignar_series_sugeridas, "Hecho.", u, emp["id"])
-                if r:
-                    st.success(f"✅ {r['asignados']} expediente(s) creados. {r['sin_sugerencia']} sin sugerencia: asígnelos a mano.")
+                if r:  # se recarga para que la tabla ya no muestre las asignadas
+                    st.session_state["flash"] = (f"✅ {r['asignados']} expediente(s) creados. "
+                                                 f"{r['sin_sugerencia']} sin sugerencia: asígnelos a mano.")
+                    st.rerun()
             if sel and sel.selection.rows:
                 s = sin_serie[sel.selection.rows[0]]
                 st.markdown(f"**Asignar serie a {s['radicado']}**")
                 c = st.selectbox("Serie / subserie", asign, key="ss_serie", format_func=lambda x: f"{x['codigo']} · {x['nombre']} "
-                                 f"({x['anios_gestion']}+{x['anios_central']} años, {A.DISPOSICIONES[x['disposicion']]})")
+                                 f"({x['anios_gestion']}+{x['anios_central']} {'año' if x['anios_gestion'] + x['anios_central'] == 1 else 'años'}, {A.DISPOSICIONES[x['disposicion']]})")
                 if st.button("✅ Asignar y crear el expediente", key="ss_asignar"):
                     if UA.ejecutar(A.asignar_serie, f"Expediente creado para {s['radicado']}.", s["id"], c["id"], u):
                         st.rerun()

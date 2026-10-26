@@ -91,3 +91,12 @@ def indice_tabla(filas: list[dict]):
     ind["sha"] = ind["sha256"].map(lambda v: txt(v, lambda t: t[:16] + "…"))
     return ind.rename(columns={"orden": "N.º", "descripcion": "Documento", "fecha_doc": "Fecha", "folios_txt": "Folios",
                                "soporte": "Soporte", "sha": "Huella SHA-256"})[["N.º", "Documento", "Fecha", "Folios", "Soporte", "Huella SHA-256"]]
+
+
+def anios(n) -> str:
+    """«1 año» / «3 años» (singular correcto)."""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return "—"
+    return f"{n} año" if n == 1 else f"{n} años"

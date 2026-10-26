@@ -8,11 +8,22 @@ from core.repositorio import obtener_repo
 
 ui.aviso_beta()
 if ui.usuario():
+    destino = st.session_state.get("destino_qr")
+    if destino and ui.PAGINAS.get("cajas_ok"):
+        st.query_params["codigo"] = destino  # la página de cajas lo toma y abre la ficha del QR
+        st.switch_page(ui.PAGINAS["cajas"])
+    if destino:
+        st.session_state.pop("destino_qr", None)
+        st.session_state["aviso_qr"] = f"Su rol no tiene acceso a las cajas de archivo, por eso no se abrió «{destino}»."
     st.switch_page(ui.PAGINAS.get("inicio_rol") or ui.PAGINAS["radicar"])
 
 import tema
 
 tema.hero("Ingreso de usuarios internos", "Abogados, supervisores, archivistas, radicadores y administradores.", "🔐")
+
+
+if st.session_state.get("destino_qr"):
+    st.info(f"📲 Ingrese para ver la caja o carpeta **{st.session_state['destino_qr']}**: al entrar la abrimos automáticamente.")
 
 
 def _entrar(u: dict):
@@ -73,9 +84,10 @@ else:
                 st.error("Clave incorrecta.")
         st.stop()
     if motivo == "local":
-        st.caption("Acceso demo sin clave solo porque esta instancia corre en local (SQLite).")
-    st.info("**Modo demostración:** elija un usuario ficticio para ver la aplicación con su rol. "
-            "En la versión conectada a Supabase se ingresa con correo y contraseña.")
+        st.caption("Demostración con datos ficticios: acceso rápido sin clave. Si publica esta demo en Internet y quiere "
+                   "restringirla, defina PQRS_DEMO_CLAVE en los secretos.")
+    st.info("**Modo demostración:** elija un usuario ficticio para ver la aplicación con su rol."
+            + (" En la versión conectada a Supabase se ingresa con correo y contraseña." if config.backend() == "postgres" else ""))
     rapidos = [("⚖️ Abogado(a) · EMP01", f"abogado1.emp01@{catalogo_demo.DOMINIO}"),
                ("🧭 Supervisor(a) · EMP01", f"supervisor.emp01@{catalogo_demo.DOMINIO}"),
                ("🗂️ Archivista · EMP01", f"archivista.emp01@{catalogo_demo.DOMINIO}"),

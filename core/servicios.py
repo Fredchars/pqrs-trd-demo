@@ -95,12 +95,22 @@ def _resolver_destinatarios(rol_dest, s):
     if rol_dest in ("supervisor", "director", "radicador", "archivista"):
         return C.usuarios(rol_dest, s["empresa_id"])
     if rol_dest == "aprobador":
+        return estado_aprobacion(s)["posibles"]
+    if rol_dest == "autor":  # quien redactó la respuesta en revisión
         r = _respuesta_actual(s["id"])
-        if not r or r["estado"] != "en_revision":
-            return []
-        n = aprobacion.nivel_pendiente(C.aprobaciones_de([r["id"]]), _niveles(s))
-        return C.usuarios(aprobacion.rol_para_nivel(n), s["empresa_id"]) if n else []
+        u = C.usuario(r["autor_id"]) if r and r.get("autor_id") else None
+        return [u] if u else []
+    if rol_dest == "admin":
+        return C.usuarios("admin", s["empresa_id"]) or C.usuarios("admin")
     return []
+
+
+def _alertar_aprobacion(s, mensaje=None, **kw):
+    """Avisa a quien puede aprobar. Si nadie puede (p. ej. el único supervisor redactó la respuesta), avisa al autor y a
+    administración en lugar de dejar la alerta de aprobación en manos del propio autor."""
+    if estado_aprobacion(s)["sin_aprobador"]:
+        return alertar("aprobacion_sin_aprobador", s, None, **kw)
+    return alertar("aprobacion_pendiente", s, mensaje, **kw)
 
 
 def alertar(tipo, s, mensaje=None, hoy=None, existentes=None, enviar_correo=True, clave_extra=""):
@@ -734,8 +744,7 @@ def enviar_a_revision(sid, contenido, usuario, es_parcial=False):
         R().actualizar("respuestas", r["id"], {"estado": "aprobada"})
         _transicion(s, "APROBADA", usuario, {"esquema": "A (sin aprobación)"}, rol="sistema")
         return {"version": r["version"], "estado": "APROBADA", "niveles": 0}
-    alertar("aprobacion_pendiente", _sol(sid), f"respuesta v{r['version']} pendiente de su aprobación",
-            clave_extra=f"|v{r['version']}")
+    _alertar_aprobacion(_sol(sid), f"respuesta v{r['version']} pendiente de su aprobación", clave_extra=f"|v{r['version']}")
     return {"version": r["version"], "estado": "EN_REVISION", "niveles": _niveles(s)}
 
 
@@ -760,6 +769,42 @@ def redacto_respuesta(r, usuario) -> bool:
     return False
 
 
+# Si nadie del rol titular puede aprobar un nivel (p. ej. el único supervisor redactó la respuesta), el nivel pasa a este rol.
+ESCALAMIENTO = {1: ("director",), 2: ()}
+
+
+def _aprobo_otro_nivel(r, usuario, nivel) -> bool:
+    return any(a["aprobador_id"] == usuario["id"] and a["decision"] == "aprobada" and int(a["nivel"]) != int(nivel)
+               for a in C.aprobaciones_de([r["id"]]))
+
+
+def estado_aprobacion(s) -> dict:
+    """Quién puede aprobar hoy la respuesta en revisión: {nivel, rol, posibles, escalado, sin_aprobador}.
+    Nunca incluye a quien redactó o editó la versión ni a quien ya aprobó otro nivel de ella (segregación)."""
+    vacio = {"nivel": None, "rol": None, "posibles": [], "escalado": False, "sin_aprobador": False}
+    r = _respuesta_actual(s["id"])
+    if not r or r["estado"] != "en_revision":
+        return vacio
+    n = aprobacion.nivel_pendiente(C.aprobaciones_de([r["id"]]), _niveles(s))
+    if not n:
+        return vacio
+    rol = aprobacion.rol_para_nivel(n)
+
+    def libres(rol_):
+        return [u for u in C.usuarios(rol_, s["empresa_id"]) if not redacto_respuesta(r, u) and not _aprobo_otro_nivel(r, u, n)]
+    titulares = libres(rol)
+    if titulares:
+        return {**vacio, "nivel": n, "rol": rol, "posibles": titulares}
+    for alterno in ESCALAMIENTO.get(n, ()):
+        alt = libres(alterno)
+        if alt:
+            return {**vacio, "nivel": n, "rol": alterno, "posibles": alt, "escalado": True}
+    return {**vacio, "nivel": n, "rol": rol, "sin_aprobador": True}
+
+
+MSG_SIN_APROBADOR = ("Nadie puede aprobar esta respuesta: quien debería hacerlo la redactó o ya aprobó otro nivel. "
+                     "Pida a administración que designe otro aprobador (otro supervisor o director de la empresa).")
+
 MSG_AUTOAPROBACION = "No puede aprobar ni devolver una respuesta que usted mismo redactó o editó; debe revisarla otra persona."
 
 
@@ -773,6 +818,8 @@ def puede_aprobar(s, usuario):
     if n is None:
         return False, None, "La respuesta ya tiene todas las aprobaciones."
     rol_req = aprobacion.rol_para_nivel(n)
+    if _aprobo_otro_nivel(r, usuario, n):
+        return False, n, "Ya aprobó otro nivel de esta respuesta; el siguiente nivel lo aprueba otra persona."
     if usuario["rol"] == rol_req and s["empresa_id"] in usuario.get("empresas", []):
         return True, n, ""
     h = _hoy()  # Delegación: el suplente aprueba si el titular está ausente
@@ -781,6 +828,13 @@ def puede_aprobar(s, usuario):
                               ausente_hasta=a_fecha(titular["ausente_hasta"]))
         if titular.get("suplente_id") == usuario["id"] and (aus.ausente(h) or not titular["disponible"]):
             return True, n, f"como suplente de {titular['nombre']}"
+    est = estado_aprobacion(s)  # escalamiento: nadie del rol titular puede aprobar
+    if est["escalado"] and any(u["id"] == usuario["id"] for u in est["posibles"]):
+        return True, n, f"por escalamiento: ningún {rol_req} de la empresa puede aprobar esta respuesta"
+    if est["sin_aprobador"]:
+        return False, n, MSG_SIN_APROBADOR
+    if est["escalado"]:
+        return False, n, f"El nivel {n} lo aprueba el rol «{est['rol']}» de la empresa (escalamiento: el {rol_req} la redactó)."
     return False, n, f"El nivel {n} lo aprueba el rol «{rol_req}» de la empresa."
 
 
@@ -798,8 +852,8 @@ def aprobar(sid, usuario, comentario="", urgente=False):
         R().actualizar("respuestas", r["id"], {"estado": "aprobada"})
         _transicion(s, "APROBADA", usuario, {"version": r["version"]}, rol="sistema")
         return {"estado": "APROBADA", "nivel": n}
-    alertar("aprobacion_pendiente", _sol(sid), f"v{r['version']} aprobada en nivel {n}; falta su aprobación (nivel {n + 1})",
-            clave_extra=f"|v{r['version']}|n{n + 1}")
+    _alertar_aprobacion(_sol(sid), f"v{r['version']} aprobada en nivel {n}; falta su aprobación (nivel {n + 1})",
+                        clave_extra=f"|v{r['version']}|n{n + 1}")
     return {"estado": "EN_REVISION", "nivel": n}
 
 
@@ -1097,8 +1151,9 @@ def generar_alertas(hoy=None):
             cuenta[tipo] = cuenta.get(tipo, 0) + alertar(tipo, s, hoy=hoy, existentes=existentes)
         ult = ult_rev.get(s["id"])
         if s["estado"] == "EN_REVISION" and ult and plazos.dias_habiles_entre(a_fecha(ult), hoy) > 1:
-            cuenta["aprobacion_pendiente"] = cuenta.get("aprobacion_pendiente", 0) + alertar(
-                "aprobacion_pendiente", s, hoy=hoy, existentes=existentes)
+            sin = estado_aprobacion(s)["sin_aprobador"]
+            k = "aprobacion_sin_aprobador" if sin else "aprobacion_pendiente"
+            cuenta[k] = cuenta.get(k, 0) + alertar(k, s, hoy=hoy, existentes=existentes)
     from core import archivo  # alertas de TRD (retención 90/30 días, vencida) y archivo físico (préstamos vencidos)
     for k, v in archivo.generar_alertas_archivo(hoy).items():
         cuenta[k] = cuenta.get(k, 0) + v

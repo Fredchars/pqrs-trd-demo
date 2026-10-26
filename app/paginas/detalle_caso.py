@@ -120,7 +120,15 @@ with tab_r:
             st.markdown(f"<div class='caja'>{aprobacion.diff_html(anterior['contenido'], actual['contenido'])}</div>",
                         unsafe_allow_html=True)
         ok, n, nota = S.puede_aprobar(s, u)
-        st.caption(f"Nivel pendiente: {n} ({aprobacion.rol_para_nivel(n) if n else '-'}) {nota}")
+        if n:
+            st.caption(f"Nivel pendiente: {n} ({aprobacion.rol_para_nivel(n)}) {nota}".strip())
+        elif nota:
+            st.caption(nota)
+        est = S.estado_aprobacion(s)
+        if est["sin_aprobador"]:
+            st.warning("⚠️ " + S.MSG_SIN_APROBADOR)
+        elif est["escalado"] and not ok:
+            st.info(f"Como quien debía aprobar redactó la respuesta, la aprobación pasó al rol «{est['rol']}».")
         if ok and not solo_lectura:
             com = st.text_area("Comentario (obligatorio para devolver)", key=f"com-{sid}")
             a1, a2, a3 = st.columns(3)

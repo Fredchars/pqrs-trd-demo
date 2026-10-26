@@ -8,6 +8,10 @@ import ui_archivo as UA
 from core import archivo as A
 
 ui.aviso_beta()
+if not ui.usuario():  # QR escaneado sin sesión: se recuerda la caja y se pide ingresar (al entrar se abre sola)
+    if str(st.query_params.get("codigo", "")).strip():
+        st.session_state["destino_qr"] = str(st.query_params.get("codigo")).strip()
+    st.switch_page(ui.PAGINAS["ingresar"])
 u = ui.requiere("archivista", "admin", "supervisor", "director", "auditor", "abogado")
 tema.hero("Cajas, carpetas y rótulos", "Dónde está cada papel: estante, caja, carpeta y folios. Rótulos listos para imprimir con QR.", "📦",
           ["Ocupación de cajas", "QR real"])
@@ -18,6 +22,10 @@ carpetas = A.carpetas(u, emp["id"])
 
 # --- Llegada desde el QR de un rótulo: ?codigo=EMP01-C-001  (o ...-F01)
 codigo = str(st.query_params.get("codigo", "")).strip()
+if not codigo and st.session_state.get("destino_qr"):  # llegó al QR sin sesión, ingresó y se conservó el destino
+    codigo = st.session_state.pop("destino_qr")
+    st.query_params["codigo"] = codigo
+st.session_state.pop("destino_qr", None)
 if codigo:
     caja = next((c for c in cajas if c["codigo"] == codigo), None)
     carp = next((f for f in carpetas if f["codigo"] == codigo), None)

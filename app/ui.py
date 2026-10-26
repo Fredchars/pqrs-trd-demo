@@ -201,7 +201,7 @@ def info_motor():
         st.sidebar.caption(f"Datos: {motor} · Correo: REAL ({config.correo_servidor()['smtp_host']})")
     else:
         st.sidebar.caption(f"Datos: {motor}")
-        st.sidebar.warning("✉️ Correo SIMULADO: no se envía nada real; ver «Buzón simulado».")
+        st.sidebar.warning("✉️ Correo SIMULADO: no se envía nada real; ver «Buzón de correo».")
 
 
 def df_descarga(df: pd.DataFrame, nombre: str, key: str):

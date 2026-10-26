@@ -278,8 +278,11 @@ def test_rotulos_pdf_con_texto_y_pie(repo):
     a1, e = usuario(ARCH1), emp_id("EMP01")
     caja = A.cajas(a1, e)[0]
     texto = PdfReader(io.BytesIO(A.rotulo_pdf("caja", caja))).pages[0].extract_text()
-    assert caja["codigo"] in texto and "Powered by ATm Consulting" in texto and "DEMOSTRACION" in texto
+    assert caja["codigo"] in texto and "Powered by ATm Consulting" in texto and "DEMOSTRACIÓN" in texto
+    for palabra in ("Depósito", "Entrepaño", "sesión"):  # tildes y eñes sin depender de fuentes del sistema
+        assert palabra in texto, palabra
     carp = A.carpetas(a1, e, caja["id"])[0]
+    assert "Año" in PdfReader(io.BytesIO(A.rotulo_pdf("carpeta", carp))).pages[0].extract_text()
     assert carp["codigo"] in PdfReader(io.BytesIO(A.rotulo_pdf("carpeta", carp))).pages[0].extract_text()
     todos = PdfReader(io.BytesIO(A.rotulos_caja_pdf(caja, a1)))
     assert len(todos.pages) == 1 + len(A.carpetas(a1, e, caja["id"]))

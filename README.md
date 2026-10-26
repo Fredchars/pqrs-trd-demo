@@ -13,7 +13,7 @@ pip install -r requirements.txt
 PQRS_BACKEND=sqlite streamlit run app/Inicio.py
 ```
 
-La primera vez se siembran datos ficticios en una base SQLite local. En *Administración › Reiniciar la demo* se vuelve al estado inicial.
+La primera vez se siembran datos ficticios en una base SQLite local. En *Administración › pestaña «Tareas y demo» › Reiniciar demo* se vuelve al estado inicial.
 Los datos son temporales: si la aplicación se reinicia, vuelven al estado inicial.
 
 ## Publicar en Streamlit Community Cloud
@@ -29,6 +29,10 @@ APP_URL = "https://<su-direccion>.streamlit.app"
 
 La pantalla *Ingresar* muestra botones para entrar con un clic con cada rol (archivista, supervisor, abogado, auditor, administrador…).
 Todos los usuarios son ficticios (`@pqrs.example.com`).
+
+**Proteger la demo publicada (opcional):** por defecto cualquiera que tenga el enlace puede entrar con los botones
+(pensado para presentarla a un cliente). Para pedir una clave antes de mostrarlos, agregue en *Secrets* de Streamlit Cloud
+`PQRS_DEMO_CLAVE = "una-clave-que-usted-elija"` y reinicie la app. No escriba esa clave en el repositorio.
 
 ## Pruebas
 

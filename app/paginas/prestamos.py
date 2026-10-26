@@ -34,7 +34,7 @@ def tabla(filas):
 t = st.tabs(["🙋 Pedir una carpeta", "📤 Entregar", "📥 Devolver", "🗒️ Historial"])
 with t[0]:
     if u["rol"] == "auditor":
-        UA.aviso_permiso(u, "pedir carpetas (el auditor solo consulta)")
+        UA.aviso_permiso(u, "pedir carpetas")
     else:
         cars = [f for f in A.carpetas(u, emp["id"]) if f["estado"] == "en_archivo" and f["n_expedientes"]]
         if not cars:

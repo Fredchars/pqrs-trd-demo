@@ -11,6 +11,8 @@ from core import consultas as C
 ui.aviso_beta()
 u = ui.requiere()
 rol = u["rol"]
+if st.session_state.get("aviso_qr"):
+    st.warning(st.session_state.pop("aviso_qr"))
 emps = [C.empresa(e) for e in u.get("empresas", []) if C.empresa(e)]
 nombre = (u["nombre"] or "").split(" ")[0] or "usuario"
 tema.hero(f"Hola, {nombre} 👋", f"Este es su resumen de hoy como {C.ROLES.get(rol, rol)}.", "🏠",

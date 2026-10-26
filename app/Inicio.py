@@ -100,6 +100,7 @@ u = ui.usuario()
 modo_formulario = str(st.query_params.get("modo", "")).lower() == "formulario"
 embed = modo_formulario or str(st.query_params.get("embed", "")).lower() == "true"
 publicas = [P["radicar"], P["consultar"]]
+qr_codigo = str(st.query_params.get("codigo", "")).strip()
 if modo_formulario:
     ui.modo_formulario()
     nav = st.navigation([P["radicar"]], position="hidden")
@@ -118,6 +119,7 @@ elif u:
                 ui.PAGINAS["inicio"] = pg
             lista.append(pg)
         grupos[titulo] = lista
+    ui.PAGINAS["cajas_ok"] = any(pg.url_path == "cajas" for lista in grupos.values() for pg in lista)
     primero = next(iter(grupos.values()))[0]
     ui.PAGINAS["inicio_rol"] = primero
     ingreso_oculto = st.Page(f"{D}/ingresar.py", title="Ingresar", icon="🔐", url_path="ingresar", visibility="hidden")
@@ -125,6 +127,11 @@ elif u:
     nav = st.navigation(grupos, position="hidden" if embed else "sidebar", expanded=True)
 else:
     ingresar = P["ingresar"]
+    # El QR de un rótulo apunta a /cajas?codigo=...: sin sesión la página «cajas» existe (oculta), recuerda el destino y
+    # lleva al ingreso; así no aparece «Page not found» y, al ingresar, se abre la caja.
+    if qr_codigo:
+        st.session_state["destino_qr"] = qr_codigo
+    publicas = publicas + [st.Page(f"{D}/cajas_rotulos.py", title="Cajas y rótulos QR", icon="📦", url_path="cajas", visibility="hidden")]
     nav = st.navigation({"Atención al ciudadano": publicas, "Usuarios internos": [ingresar]},
                         position="hidden" if embed else "sidebar")
 

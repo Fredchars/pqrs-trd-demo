@@ -1,7 +1,7 @@
 """Correo: IMAP/SMTP real (Gmail beta con contraseña de aplicación) o buzón SIMULADO en la base de datos.
 
 Sin MAIL_USER / MAIL_APP_PASSWORD todo correo de salida queda en la tabla `correos`
-(visible en la página «Buzón simulado») y se pueden simular correos entrantes de ciudadanos.
+(visible en la página «Buzón de correo») y se pueden simular correos entrantes de ciudadanos.
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from email.utils import formatdate, getaddresses, make_msgid, parseaddr
 from core import config
 from core.reloj import ahora
 
-AVISO_SIMULADO = ("CORREO SIMULADO: no se envió ningún correo real. Los mensajes quedan en la página «Buzón simulado». "
+AVISO_SIMULADO = ("CORREO SIMULADO: no se envió ningún correo real. Los mensajes quedan en la página «Buzón de correo». "
                   "Para envío real configure MAIL_USER y MAIL_APP_PASSWORD (y opcionalmente MAIL_SMTP_HOST, MAIL_SMTP_PORT, "
                   "MAIL_IMAP_HOST, MAIL_FROM) en los secretos.")
 

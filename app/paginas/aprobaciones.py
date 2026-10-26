@@ -25,4 +25,6 @@ with st.expander(f"Aprobadas pendientes de envío ({len(aprobadas)})"):
     ui.tabla_casos(aprobadas, "apr-env")
 ui.ayuda("Esquemas: **A** sin aprobación (sugerencias) · **B** un nivel: supervisor · **C** dos niveles: supervisor y "
          "director (temas sensibles). Si el aprobador titular está ausente, su **suplente** puede aprobar. Si el caso vence "
-         "hoy, el supervisor puede **aprobar y enviar** en un solo paso.")
+         "hoy, el supervisor puede **aprobar y enviar** en un solo paso. Nadie aprueba una respuesta que redactó: si el único "
+         "supervisor de la empresa la redactó, la aprobación pasa al **director**; si no hay quién pueda aprobar, se avisa al "
+         "autor y a administración.")

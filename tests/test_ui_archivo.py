@@ -79,3 +79,143 @@ def test_ficha_del_caso_cerrado_muestra_la_serie_y_la_ubicacion(repo):
     sin = A.cerradas_sin_serie(arch)[0]
     at = _correr("archivista.emp01", "detalle_caso", {"caso_id": sin["id"]})
     assert any("serie documental" in w.value for w in at.warning)
+
+
+# ---------------------------------------------------------------- QR de caja sin sesión (se conserva el destino)
+def _qr_caja(repo):
+    from core import archivo as A
+    from core import consultas as C
+    u = C.usuario_por_email(f"archivista.emp01@{__import__('core.catalogo_demo').catalogo_demo.DOMINIO}")
+    e = C.empresa_por_codigo("EMP01")
+    return next(c for c in A.cajas(u, e["id"]))["codigo"]
+
+
+def test_qr_de_caja_sin_sesion_lleva_al_ingreso_y_conserva_la_caja(repo):
+    from streamlit.testing.v1 import AppTest
+    from core import catalogo_demo
+    from test_ui import APP
+    cod = _qr_caja(repo)
+    at = AppTest.from_file(APP, default_timeout=90)
+    at.query_params["codigo"] = cod
+    at.run()
+    at.switch_page("paginas/cajas_rotulos.py")  # como al escanear /cajas?codigo=... sin sesión
+    at.run()
+    at.switch_page("paginas/ingresar.py")  # AppTest no sigue el switch_page de la página: se simula el salto
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    # sin sesión: aterriza en «Ingresar» con aviso claro de la caja
+    assert any(cod in i.value and "Ingrese" in i.value for i in at.info)
+    # ingresa como archivista -> se abre la ficha de la caja del QR
+    for b in at.button:
+        if "Archivista" in b.label:
+            b.click()
+            break
+    else:
+        raise AssertionError("no hay botón de acceso rápido de archivista")
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert any(f"Abierto desde el QR: **{cod}**" in s.value for s in at.success), [s.value for s in at.success]
+    assert catalogo_demo  # silencia import no usado
+
+
+def test_qr_de_caja_con_rol_sin_acceso_avisa_en_el_inicio(repo):
+    from streamlit.testing.v1 import AppTest
+    from test_ui import APP
+    cod = _qr_caja(repo)
+    at = AppTest.from_file(APP, default_timeout=90)
+    at.query_params["codigo"] = cod
+    at.run()
+    at.switch_page("paginas/cajas_rotulos.py")
+    at.run()
+    at.switch_page("paginas/ingresar.py")
+    at.run()
+    for b in at.button:
+        if "Radicador" in b.label:
+            b.click()
+            break
+    at.run()
+    assert not at.exception, [e.value for e in at.exception]
+    assert any("no tiene acceso a las cajas" in w.value for w in at.warning), [w.value for w in at.warning]
+
+
+# ---------------------------------------------------------------- hallazgos de la verificación de la guía v2
+def test_login_demo_texto_veraz_y_clave_opcional(repo, monkeypatch):
+    from streamlit.testing.v1 import AppTest
+    from test_ui import APP
+    at = AppTest.from_file(APP, default_timeout=90)
+    at.run()
+    at.switch_page("paginas/ingresar.py")
+    at.run()
+    assert not at.exception
+    txt = " ".join(c.value for c in at.caption)
+    assert "datos ficticios" in txt and "PQRS_DEMO_CLAVE" in txt and "corre en local" not in txt
+    assert any("Archivista" in b.label for b in at.button)
+    # con PQRS_DEMO_CLAVE definida se pide la clave y NO se ofrecen los botones
+    from core import config  # (la app retira PQRS_DEMO_CLAVE del entorno en pruebas: se simula con el lector de configuración)
+    original = config.obtener
+    monkeypatch.setattr(config, "obtener", lambda k, d=None: "clave-de-prueba" if k == "PQRS_DEMO_CLAVE" else original(k, d))
+    at = AppTest.from_file(APP, default_timeout=90)
+    at.run()
+    at.switch_page("paginas/ingresar.py")
+    at.run()
+    assert not at.exception
+    assert any("Clave de acceso" in t.label for t in at.text_input)
+    assert not any("Archivista" in b.label for b in at.button)
+    at.text_input[0].input("incorrecta")
+    at.button[0].click()
+    at.run()
+    assert any("Clave incorrecta" in e.value for e in at.error)
+    at.text_input[0].input("clave-de-prueba")
+    at.button[0].click()
+    at.run()
+    assert any("Archivista" in b.label for b in at.button)
+
+
+def test_anios_en_singular_y_plural():
+    from conftest import RAIZ
+    import sys
+    sys.path.insert(0, str(RAIZ / "app"))
+    import ui_archivo
+    assert ui_archivo.anios(1) == "1 año" and ui_archivo.anios(0) == "0 años" and ui_archivo.anios(5) == "5 años"
+    assert ui_archivo.anios(None) == "—"
+
+
+def test_administracion_en_demo_no_menciona_github_actions_ni_supabase(repo):
+    at = _correr("admin", "administracion")
+    txt = " ".join(m.value for m in at.markdown)
+    assert "GitHub Actions" not in txt and "esta demostración no corren solas" in txt
+
+
+def test_detalle_en_revision_no_muestra_none_y_el_director_aprueba_por_escalamiento(repo_vacio):
+    from core import consultas as C
+    from core import servicios as S
+    from test_e2e import _caso_en_tramite
+    s, _ = _caso_en_tramite("EMP06", "R")
+    sup = C.usuarios("supervisor", s["empresa_id"])[0]
+    S.enviar_a_revision(s["id"], "Respuesta redactada por el único supervisor (ficticia).", sup)
+    at = _correr(sup["email"], "detalle_caso", {"caso_id": s["id"]})
+    txt = " ".join(c.value for c in at.caption)
+    assert not any("None" in c.value for c in at.caption) and "usted mismo" in txt
+    assert not any(b.label.startswith("✅ Aprobar") for b in at.button)  # el autor no puede aprobar
+    d = C.usuarios("director", s["empresa_id"])[0]
+    at = _correr(d["email"], "detalle_caso", {"caso_id": s["id"]})
+    assert any(b.label.startswith("✅ Aprobar") for b in at.button)
+    capt = " ".join(c.value for c in at.caption)
+    assert "Nivel pendiente: 1 (supervisor)" in capt and "escalamiento" in capt and "None" not in capt
+
+
+def test_asignar_series_sugeridas_refresca_la_tabla(repo):
+    from core import archivo as A
+    arch = usuario("archivista.emp01")
+    e = A.cerradas_sin_serie(arch)
+    assert e, "la semilla debe dejar cerradas sin serie"
+    at = _correr("archivista.emp01", "expedientes")
+    btn = next(b for b in at.button if "Asignar las series sugeridas" in b.label)
+    btn.click()
+    at.run()
+    assert not at.exception, [x.value for x in at.exception]
+    quedan = A.cerradas_sin_serie(arch)
+    assert len(quedan) < len(e)
+    # la pestaña refleja el nuevo número (sin necesidad de recargar a mano)
+    assert any(f"Cerradas sin serie ({len(quedan)})" in t.label for t in at.tabs)
+    assert any("expediente(s) creados" in s.value for s in at.success)

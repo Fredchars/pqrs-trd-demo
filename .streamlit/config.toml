@@ -14,7 +14,7 @@ textColor = "#F1F5F9"
 primaryColor = "#5EEAD4"
 
 [server]
-maxUploadSize = 10  # MB por archivo: igual a max_mb_archivo (el total por solicitud, 25 MB, lo valida la app)
+maxUploadSize = 25  # MB: tope técnico de Streamlit (su aviso sale en inglés). Los 10 MB por archivo y 25 MB por solicitud los valida la app, en español
 runOnSave = false
 
 [browser]

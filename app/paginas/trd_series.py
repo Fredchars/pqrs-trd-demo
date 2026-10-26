@@ -19,7 +19,7 @@ conret = [s for s in series if s["disposicion"]]
 tema.kpis([("🗂️", "Series", sum(1 for s in series if not s["serie_padre_id"]), "azul", "Agrupan los documentos por función"),
            ("📑", "Subseries", len(hijas), "teal", "Cada una con su retención"),
            ("📁", "Expedientes asignados", sum(s["n_expedientes"] for s in series), "verde", "PQRS cerradas con serie"),
-           ("⏳", "Retención más larga", f"{max((A.retencion_total(s) or 0) for s in conret) if conret else 0} años", "morado", "Gestión + central")])
+           ("⏳", "Retención más larga", UA.anios(max((A.retencion_total(s) or 0) for s in conret) if conret else 0), "morado", "Gestión + central")])
 with st.expander("❓ ¿Cómo se lee esta tabla?"):
     st.markdown(
         "- **Archivo de gestión**: años que el expediente permanece cerca de quien lo tramitó, contados desde el cierre de la PQRS.\n"

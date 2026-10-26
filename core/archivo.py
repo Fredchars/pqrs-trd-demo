@@ -657,12 +657,12 @@ def rotulo_pdf(tipo: str, objeto: dict, usuario=None) -> bytes:
     pdf.cell(95, 12, _latin1(codigo))
     pdf.set_font("Helvetica", "", 10)
     if tipo == "caja":
-        lineas = [f"Sede: {objeto['sede']}", f"Deposito: {objeto['deposito']}", f"Estante: {objeto['estante']}   Entrepano: {objeto['entrepano']}",
+        lineas = [f"Sede: {objeto['sede']}", f"Depósito: {objeto['deposito']}", f"Estante: {objeto['estante']}   Entrepaño: {objeto['entrepano']}",
                   f"Capacidad: {objeto['capacidad_carpetas']} carpetas", f"Estado: {objeto['estado']}"]
     else:
         lineas = [f"Caja: {objeto.get('caja_codigo', '')}", f"Serie: {(objeto.get('serie_codigo') or '-')} {(objeto.get('serie_nombre') or '')}",
-                  f"Anio: {objeto.get('anio') or '-'}", f"Folios: {objeto.get('folio_inicial')} a {objeto.get('folio_final')}",
-                  f"Ubicacion: Estante {objeto.get('estante')} / Entrepano {objeto.get('entrepano')}"]
+                  f"Año: {objeto.get('anio') or '-'}", f"Folios: {objeto.get('folio_inicial')} a {objeto.get('folio_final')}",
+                  f"Ubicación: Estante {objeto.get('estante')} / Entrepaño {objeto.get('entrepano')}"]
         if objeto.get("descripcion"):
             lineas.append(str(objeto["descripcion"])[:70])
     y = 40
@@ -674,11 +674,11 @@ def rotulo_pdf(tipo: str, objeto: dict, usuario=None) -> bytes:
     pdf.image(io.BytesIO(png), x=108, y=26, w=34, h=34)
     pdf.set_font("Helvetica", "", 7)
     pdf.set_xy(104, 62)
-    pdf.multi_cell(42, 3.5, _latin1("Escanee con el celular para abrir la ficha en el sistema (requiere inicio de sesion)."), align="C")
+    pdf.multi_cell(42, 3.5, _latin1("Escanee con el celular para abrir la ficha en el sistema (requiere inicio de sesión)."), align="C")
     pdf.set_text_color(170, 30, 30)
     pdf.set_font("Helvetica", "", 7)
     pdf.set_xy(8, 93)
-    pdf.cell(0, 4, _latin1("DEMOSTRACION - DATOS FICTICIOS  |  Powered by ATm Consulting"))
+    pdf.cell(0, 4, _latin1("DEMOSTRACIÓN - DATOS FICTICIOS  |  Powered by ATm Consulting"))
     return bytes(pdf.output())
 
 

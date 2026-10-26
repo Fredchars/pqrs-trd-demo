@@ -82,7 +82,8 @@ with t[1]:
                     nu = C.usuario_por_email(em.strip().lower())
                     for e in emp:
                         S.crear_config("usuario_empresa", {"usuario_id": nu["id"], "empresa_id": e["id"]}, u)
-                    st.success("Usuario creado. En modo Supabase, créele también la cuenta de acceso (scripts/setup_supabase.py).")
+                    st.success("Usuario creado." if not repo.es_pg else
+                               "Usuario creado. En modo Supabase, créele también la cuenta de acceso (scripts/setup_supabase.py).")
                 except Exception as ex:
                     ui.error(ex)
 with t[2]:
@@ -130,8 +131,12 @@ with t[6]:
             S.borrar_festivo(b["id"], u)
             st.rerun()
 with t[7]:
-    st.markdown("**Tareas programadas** (en producción las ejecuta GitHub Actions cada 15 minutos con `jobs/run_all.py`): "
-                "leer el buzón, completar radicaciones por API, repartir pendientes, desistimientos, cierre automático y alertas.")
+    if repo.es_pg:
+        st.markdown("**Tareas programadas** (en producción las ejecuta GitHub Actions cada 15 minutos con `jobs/run_all.py`): "
+                    "leer el buzón, completar radicaciones por API, repartir pendientes, desistimientos, cierre automático y alertas.")
+    else:
+        st.markdown("**Tareas programadas**: en esta demostración no corren solas; pulse el botón para ejecutarlas a la vez "
+                    "(leer el buzón de correo, repartir pendientes, desistimientos, cierre automático y alertas).")
     if st.button("▶️ Ejecutar tareas ahora", type="primary"):
         with st.spinner("Ejecutando…"):
             r = S.ejecutar_tareas()
